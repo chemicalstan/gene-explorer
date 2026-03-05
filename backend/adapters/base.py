@@ -27,7 +27,9 @@ class BaseLLMAdapter(ABC):
         messages: list[dict],
         tools: list[dict],
         response_format: dict | None = None,
-    ) -> LLMResponse: ...
+    ) -> LLMResponse:
+        """Prompt LLM to call tool or generate response"""
+        ...
 
     @property
     @abstractmethod
