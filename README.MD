@@ -112,7 +112,7 @@ Both services start automatically:
 | Service | URL | Description |
 |---|---|---|
 | **Frontend** (Streamlit UI) | http://localhost:8501 | Chat interface for non-technical users |
-| **Backend** (FastAPI) | http://localhost:8000 | localhost:8000/docs |
+| **Backend** (FastAPI) | http://localhost:8000 |  http://localhost:8000/docs |
 
 **4. Try the app**
 
