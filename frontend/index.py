@@ -90,7 +90,16 @@ if "pending" not in st.session_state:
 
 
 # ── Backend helpers ────────────────────────────────────────────────────────────
-
+@st.cache_data(ttl=30)
+def get_health():
+    try:
+        r = requests.get(f"{BACKEND_URL}/health", timeout=4)
+        d = r.json()
+        provider = d.get("provider", "none")
+        mode = "deterministic" if "rule_based" in provider else "llm"
+        return mode, provider
+    except Exception:
+        return "offline", "none"
 
 
 def get_reply(message: str) -> tuple[str, list]:
