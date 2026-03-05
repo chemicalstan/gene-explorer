@@ -3,6 +3,13 @@
 All examples target the local server at `http://localhost:8000`. Responses are piped through `python3 -m json.tool` for readability.
 
 ---
+## 0. Query structure
+```bash
+curl -s -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is the median expression of genes in breast cancer?"}' \
+  | python3 -m json.tool
+```
 
 ## 1. Capabilities check
 No tool call expected — the agent responds from context alone.

@@ -118,14 +118,7 @@ Both services start automatically:
 
 - For and interactive UI, open http://localhost:8501 in your browser
 
-- To interact via CLI, query the API directly:
-```bash
-curl -s -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is the median expression of genes in breast cancer?"}' \
-  | python3 -m json.tool
-```
-*For API usage examples and curl commands, see [API Examples](/assets/api-examples.md).*
+- To interact and curl commands, see [API Examples](/assets/api-examples.md)
 
 **5. Run the test suite**
 ```bash
