@@ -5,9 +5,9 @@ from backend.api.schemas import ChatRequest, ChatResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-# from backend.agent.agent import Agent
+from backend.agent.agent import Agent
 
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def create_app(agent: Agent) -> FastAPI:
