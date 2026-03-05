@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort (import order)
+    "UP",  # pyupgrade (modern Python syntax)
+    "B",   # flake8-bugbear (common bugs and design issues)
+]
+ignore = [
+    "E501",  # line too long — ruff format handles this
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
