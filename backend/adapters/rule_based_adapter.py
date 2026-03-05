@@ -56,10 +56,10 @@ def _format_expressions(raw: str) -> str:
 class RuleBasedAdapter(BaseLLMAdapter):
     def complete(
         self,
-        _1: str,
+        system_prompt: str,
         messages: list[dict],
-        _2: list[dict],
-        _3: dict | None = None,
+        tools: list[dict],
+        response_format: dict | None = None,
     ) -> LLMResponse:
         try:
             tool_results = _tool_results(messages)
