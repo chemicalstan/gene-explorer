@@ -193,8 +193,6 @@ LLMs bring flexible natural language understanding and easy extensibility, but i
 - Stronger LLM guardrails and output validation
 - A more robust deterministic fallback using intent classification and a finite-state rule engine
 
-The main changes: fixed the "Desing" typo, merged the tradeoffs/safeguards into a single flowing paragraph (they're really one idea), and tightened the pattern descriptions to lead with the key insight rather than restating the pattern name.
-
 ## AI-Assisted Coding
 
 AI was used as a productivity aid — architecture, design decisions, and core logic were written and validated manually.
