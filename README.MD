@@ -66,8 +66,46 @@ flowchart TD
 
 ---
 
+## Quick Start
 
+### Prerequisites
 
+Docker Desktop must be installed on your machine before continuing.
+
+| Platform | Download |
+|---|---|
+| **macOS** (Apple Silicon & Intel) | [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/) |
+| **Windows 11** | [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) |
+
+> For a step-by-step walkthrough across all platforms, see this [comprehensive guide](https://medium.com/@piyushkashyap045/comprehensive-guide-installing-docker-and-docker-compose-on-windows-linux-and-macos-a022cf82ac0b).
+
+---
+
+### Running the Service
+
+**1. Clone the repository**
+```bash
+git clone https://github.com/chemicalstan/gene-explorer.git
+cd gene-explorer
+```
+
+**2. Set up your API key**
+
+The agent uses `llama-3.3-70b-versatile` via Groq. Get a free key at [console.groq.com/keys](https://console.groq.com/keys).
+```bash
+cp .env.example .env
+```
+
+Open `.env` and add your key:
+```
+GROQ_API_KEY=gsk_...your_key_here...
+```
+
+**3. Start the services**
+```bash
+docker compose up --build
+```
+---
 
 ```
 agent/
