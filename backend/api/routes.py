@@ -1,7 +1,7 @@
 import logging
 import os
 
-from backend.api.schemas import ChatRequest, ChatResponse
+from backend.api.schemas import ChatRequest, ChatResponse, HealthResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(agent: Agent) -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(
+        title="Gene Explorer API",
+        description="Conversational agent for querying cancer genomics data via the Open Targets Platform.",
+        version="1.0.0",
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -20,8 +24,14 @@ def create_app(agent: Agent) -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.post("/chat", response_model=ChatResponse)
+    @app.post(
+        "/chat",
+        response_model=ChatResponse,
+        summary="Chat with the genomics agent",
+        tags=["Agent"],
+    )
     async def chat(request: ChatRequest) -> ChatResponse:
+        """Send a natural language query; the agent calls the relevant genomics tool and returns an answer."""
         try:
             answer, tool_calls = agent.run(request.message)
             return ChatResponse(
@@ -36,8 +46,14 @@ def create_app(agent: Agent) -> FastAPI:
                 detail="An internal error occurred. Please try again.",
             )
 
-    @app.get("/health")
-    def health() -> dict:
-        return {"status": "ok", "provider": agent.provider_name}
+    @app.get(
+        "/health",
+        response_model=HealthResponse,
+        summary="Health check",
+        tags=["System"],
+    )
+    def health() -> HealthResponse:
+        """Returns service liveness and the active agent adapter."""
+        return HealthResponse(status="ok", provider=agent.provider_name)
 
     return app
