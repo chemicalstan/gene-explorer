@@ -5,7 +5,7 @@ import pandas as pd
 
 from backend.config import get_llm_adapter
 from backend.tools.get_expressions import GetExpressionsTool
-# from backend.tools.get_targets import GetTargetsTool
+from backend.tools.get_targets import GetTargetsTool
 from backend.tools.registry import ToolRegistry
 
 logging.basicConfig(
