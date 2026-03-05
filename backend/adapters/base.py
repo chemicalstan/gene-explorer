@@ -12,6 +12,7 @@ class ToolCall:
 
 @dataclass
 class LLMResponse:
+    """Exactly one of content or tool_call will be set — never both, required for agent loop branching."""
     content: str | None           # final answer
     tool_call: ToolCall | None    # tool invocation request
     raw: Any = None               # original provider response
@@ -35,6 +36,6 @@ class BaseLLMAdapter(ABC):
     def build_tool_result_message(
         self, call_id: str | None, result: str, tool_name: str | None = None
     ) -> dict:
-        """Returns the message dict to append after executing a tool call.
-        Default is Groq LLM format; override for providers with different formats."""
+        """Formats a tool result for the message history.
+        Override this for providers that expect a different format."""
         return {"role": "tool", "tool_call_id": call_id, "content": result}
