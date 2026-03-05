@@ -3,6 +3,7 @@ import logging
 from backend.adapters.base import BaseLLMAdapter
 from backend.adapters.groq_adapter import GroqAdapter
 from backend.utils.constants import GROQ_MODEL
+from backend.adapters.rule_based_adapter import RuleBasedAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -20,3 +21,4 @@ def get_llm_adapter() -> BaseLLMAdapter:
                 logger.warning("GroqAdapter failed: %s. Falling back.", e)
 
     logger.warning("No LLM provider available. Using rule-based fallback.")
+    return RuleBasedAdapter()
