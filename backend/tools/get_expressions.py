@@ -27,12 +27,23 @@ class GetExpressionsTool(BaseTool):
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "List of gene names to retrieve median expression values for.",
+                },
+                "cancer_name": {
+                    "type": "string",
+                    "enum": [
+                        "lung", "breast", "prostate", "gastric",
+                        "glioblastoma", "colorectal", "melanoma",
+                        "ovarian", "pancreatic", "renal"
+                    ],
+                    "description": "The cancer type to look up gene targets for.",
                 }
             },
-            "required": ["genes"],
+            "required": ["genes", "cancer_name"],
         }
 
     def run(self, **kwargs) -> dict:
         genes = kwargs["genes"]
-        subset = self._df[self._df["gene"].isin(genes)]
+        cancer_name = kwargs["cancer_name"]
+        
+        subset = self._df[self._df["gene"].isin(genes) & (self._df['cancer_indication'] == cancer_name)]
         return dict(zip(subset["gene"], subset["median_value"]))
