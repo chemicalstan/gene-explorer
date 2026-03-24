@@ -193,22 +193,6 @@ LLMs bring flexible natural language understanding and easy extensibility, but i
 - Stronger LLM guardrails and output validation
 - A more robust deterministic fallback using intent classification and a finite-state rule engine
 
-## AI-Assisted Coding
-
-AI was used as a productivity aid — architecture, design decisions, and core logic were written and validated manually.
-
-**Pros**
-
-- Given the 4-hour constraint (and my ongoing MSc examination and coursework), AI helped accelerate repetitive tasks such as boilerplate code, test scaffolding, and some UI components, allowing me to focus more on architectural decisions and system behavior.
-- It was also useful for exploring unfamiliar APIs, particularly the Groq SDK, surfacing usage patterns quickly and reducing time spent in documentation. It also helped refine parts of the rule-based fallback logic and catch issues during development.
-
-**Cons**
-
-- AI-generated code requires careful supervision — models can hallucinate implementations or suggest patterns that don't match the intended design, so all output had to be reviewed and validated.
-- There's also a tendency to over-engineer or produce redundant code, which needed manual trimming to keep the implementation appropriately scoped.
-
-> *In this project I used AI as an accelerator to achieve faster implementation and debugging, however, the architectural decisions and correctness stayed under manual control.*
-
 ---
 **References:**
 - Groq Tool Use docs: https://console.groq.com/docs/tool-use
