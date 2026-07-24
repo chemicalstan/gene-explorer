@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Annotated
 
-from agents import FunctionTool, RunContextWrapper, function_tool
+from agents import RunContextWrapper, Tool, function_tool
 from pydantic import Field
 
 from gene_explorer.domain import CancerName, GeneContext
@@ -27,4 +27,4 @@ def get_expressions(
     return json.dumps(ctx.context.repo.expressions_for(cancer_name, genes))
 
 
-TOOLS: list[FunctionTool] = [get_targets, get_expressions]
+TOOLS: list[Tool] = [get_targets, get_expressions]

@@ -6,7 +6,6 @@ from agents import (
     OpenAIChatCompletionsModel,
     set_tracing_disabled,
 )
-from agents.items import ToolCallItem
 from agents.run import Runner
 from openai import AsyncOpenAI
 
@@ -59,9 +58,5 @@ async def run_agent(
     except Exception as exc:  # noqa: BLE001 - surfaced as a domain error to the API
         raise AgentRunError(str(exc)) from exc
 
-    tools = context.tool_calls or [
-        item.raw_item.name
-        for item in getattr(result, "new_items", [])
-        if isinstance(item, ToolCallItem)
-    ]
-    return str(result.final_output), tools
+    # Each tool appends its own name to the context, giving the exact call order.
+    return str(result.final_output), list(context.tool_calls)

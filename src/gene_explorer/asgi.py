@@ -22,8 +22,7 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     repo = GeneRepository.from_csv(settings.csv_path)
     if set(repo.cancer_types) != set(CANCER_TYPES):
         raise DataValidationError(
-            f"Dataset cancers {repo.cancer_types} do not match "
-            f"the code vocabulary {CANCER_TYPES}."
+            f"Dataset cancers {repo.cancer_types} do not match the code vocabulary {CANCER_TYPES}."
         )
 
     agent = build_agent(settings)

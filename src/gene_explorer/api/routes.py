@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from agents import Agent
 from fastapi import APIRouter, HTTPException
 
 from gene_explorer.agent import AgentRunError, run_agent
@@ -12,12 +13,13 @@ from gene_explorer.api.schemas import (
     ReadinessResponse,
 )
 from gene_explorer.config import Settings
+from gene_explorer.domain import GeneContext
 from gene_explorer.repository import GeneRepository
 
 logger = logging.getLogger(__name__)
 
 
-def build_router(settings: Settings, agent: object, repo: GeneRepository) -> APIRouter:
+def build_router(settings: Settings, agent: Agent[GeneContext], repo: GeneRepository) -> APIRouter:
     router = APIRouter(prefix="/v1")
 
     @router.post("/chat", response_model=ChatResponse, tags=["Agent"])
@@ -26,9 +28,9 @@ def build_router(settings: Settings, agent: object, repo: GeneRepository) -> API
             answer, tools = await run_agent(
                 agent, repo, request.message, max_turns=settings.max_turns
             )
-        except AgentRunError:
+        except AgentRunError as exc:
             logger.exception("agent run failed")
-            raise HTTPException(status_code=502, detail="The model is unavailable.")
+            raise HTTPException(status_code=502, detail="The model is unavailable.") from exc
         return ChatResponse(answer=answer, model=settings.model, tool_calls_made=tools)
 
     @router.get("/health/live", response_model=LivenessResponse, tags=["System"])

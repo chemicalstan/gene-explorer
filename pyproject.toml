@@ -49,10 +49,13 @@ known-first-party = ["gene_explorer"]
 quote-style = "double"
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12 matches the checking interpreter and parses numpy's PEP 695 stubs.
+# The runtime floor stays 3.11 (requires-python, ruff target-version).
+python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 mypy_path = "src"
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -35,17 +35,12 @@ class GeneRepository:
         mask = self._df["cancer_indication"] == cancer_name
         return self._df.loc[mask, "gene"].tolist()
 
-    def expressions_for(
-        self, cancer_name: str, genes: Iterable[str]
-    ) -> dict[str, float]:
+    def expressions_for(self, cancer_name: str, genes: Iterable[str]) -> dict[str, float]:
         # Filter on BOTH cancer and gene. Filtering on gene alone matches the same
         # gene under other cancers and silently returns the wrong value.
         wanted = list(genes)
-        mask = (self._df["cancer_indication"] == cancer_name) & (
-            self._df["gene"].isin(wanted)
-        )
+        mask = (self._df["cancer_indication"] == cancer_name) & (self._df["gene"].isin(wanted))
         subset = self._df.loc[mask]
         return {
-            str(g): float(v)
-            for g, v in zip(subset["gene"], subset["median_value"], strict=True)
+            str(g): float(v) for g, v in zip(subset["gene"], subset["median_value"], strict=True)
         }

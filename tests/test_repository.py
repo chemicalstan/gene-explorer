@@ -42,9 +42,7 @@ def test_from_csv_missing_file_raises(tmp_path):
 
 def test_real_dataset_breast_values_are_pinned(real_repo):
     # Regression lock for the P0 bug. These are the true breast values.
-    got = real_repo.expressions_for(
-        "breast", ["BRCA2", "BRCA1", "TP53", "CDH1", "PIK3CA"]
-    )
+    got = real_repo.expressions_for("breast", ["BRCA2", "BRCA1", "TP53", "CDH1", "PIK3CA"])
     assert got == {
         "BRCA2": 0.032,
         "BRCA1": 0.094,

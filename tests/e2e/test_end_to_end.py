@@ -12,9 +12,7 @@ def _live_client() -> TestClient:
     return TestClient(build_app(Settings(_env_file=None)))
 
 
-@pytest.mark.skipif(
-    not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e"
-)
+@pytest.mark.skipif(not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e")
 def test_breast_query_returns_grounded_values():
     r = _live_client().post(
         "/v1/chat",
@@ -26,9 +24,7 @@ def test_breast_query_returns_grounded_values():
     assert "get_expressions" in body["tool_calls_made"]
 
 
-@pytest.mark.skipif(
-    not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e"
-)
+@pytest.mark.skipif(not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e")
 def test_unknown_cancer_is_refused():
     r = _live_client().post("/v1/chat", json={"message": "genes in esophageal cancer?"})
     assert r.status_code == 200
