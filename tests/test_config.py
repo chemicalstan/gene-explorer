@@ -32,3 +32,12 @@ def test_api_key_is_secret(monkeypatch):
     s = Settings(_env_file=None)
     assert "gsk_secret" not in repr(s)
     assert s.groq_api_key.get_secret_value() == "gsk_secret"
+
+
+def test_allowed_origins_parses_comma_separated_string(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    monkeypatch.setenv("ALLOWED_ORIGINS", "http://localhost:8501, https://app.example")
+    assert Settings(_env_file=None).allowed_origins == [
+        "http://localhost:8501",
+        "https://app.example",
+    ]
