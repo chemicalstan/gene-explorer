@@ -15,10 +15,11 @@ def get_llm_adapter() -> BaseLLMAdapter:
         if api_key:
             try:
                 adapter = GroqAdapter(GROQ_MODEL)
+                adapter._client.models.list()
                 logger.info("Using provider: %s", adapter.provider_name)
                 return adapter
             except Exception as e:
-                logger.warning("GroqAdapter failed: %s. Falling back.", e)
+                logger.warning("GroqAdapter failed (%s: %s). Falling back.", type(e).__name__, e)
 
     logger.warning("No LLM provider available. Using rule-based fallback.")
     return RuleBasedAdapter()
