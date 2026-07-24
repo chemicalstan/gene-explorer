@@ -10,10 +10,10 @@ from agents.run import Runner
 from openai import AsyncOpenAI
 
 from gene_explorer.config import Settings
-from gene_explorer.domain import CANCER_TYPES, GeneContext, GeneExplorerError
+from gene_explorer.domain import GeneExplorerError, ToolCallLog
 from gene_explorer.prompts import build_system_prompt
 from gene_explorer.repository import GeneRepository
-from gene_explorer.tools import TOOLS
+from gene_explorer.tools import build_tools
 
 # Tracing otherwise uploads to OpenAI's servers and 401s against a Groq-only key.
 set_tracing_disabled(True)
@@ -23,18 +23,21 @@ class AgentRunError(GeneExplorerError):
     """The agent failed to produce an answer."""
 
 
-def build_agent(settings: Settings) -> Agent[GeneContext]:
+def build_agent(settings: Settings, repo: GeneRepository) -> Agent[ToolCallLog]:
+    """Build the agent for a given data layer. The prompt and the tools both take
+    their cancer vocabulary from the repository, so the agent adapts to whatever
+    data the repository serves."""
     client = AsyncOpenAI(
         api_key=settings.groq_api_key.get_secret_value(),
         base_url=settings.groq_base_url,
         timeout=settings.request_timeout_s,
     )
     model = OpenAIChatCompletionsModel(model=settings.model, openai_client=client)
-    return Agent[GeneContext](
+    return Agent[ToolCallLog](
         name="gene-explorer",
-        instructions=build_system_prompt(CANCER_TYPES),
+        instructions=build_system_prompt(repo.cancer_types),
         model=model,
-        tools=TOOLS,
+        tools=build_tools(repo),
         model_settings=ModelSettings(
             temperature=settings.temperature,
             extra_body={
@@ -46,17 +49,13 @@ def build_agent(settings: Settings) -> Agent[GeneContext]:
 
 
 async def run_agent(
-    agent: Agent[GeneContext],
-    repo: GeneRepository,
-    message: str,
-    *,
-    max_turns: int,
+    agent: Agent[ToolCallLog], message: str, *, max_turns: int
 ) -> tuple[str, list[str]]:
-    context = GeneContext(repo=repo)
+    log = ToolCallLog()
     try:
-        result = await Runner.run(agent, message, context=context, max_turns=max_turns)
+        result = await Runner.run(agent, message, context=log, max_turns=max_turns)
     except Exception as exc:  # noqa: BLE001 - surfaced as a domain error to the API
         raise AgentRunError(str(exc)) from exc
 
-    # Each tool appends its own name to the context, giving the exact call order.
-    return str(result.final_output), list(context.tool_calls)
+    # Each tool appends its own name to the log, giving the exact call order.
+    return str(result.final_output), list(log.tool_calls)

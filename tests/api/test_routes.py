@@ -10,15 +10,15 @@ class _StubAgent:
 
 
 @pytest.fixture
-def client(monkeypatch, repo):
+def client(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
     settings = Settings(_env_file=None)
 
-    async def _fake_run_agent(agent, r, message, *, max_turns):
+    async def _fake_run_agent(agent, message, *, max_turns):
         return ("BRCA2: 0.032", ["get_targets", "get_expressions"])
 
     monkeypatch.setattr("gene_explorer.api.routes.run_agent", _fake_run_agent)
-    app = create_app(settings=settings, agent=_StubAgent(), repo=repo)
+    app = create_app(settings=settings, agent=_StubAgent())
     return TestClient(app)
 
 

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from gene_explorer.agent import build_agent
 from gene_explorer.api.app import create_app
 from gene_explorer.config import Settings, get_settings
-from gene_explorer.domain import CANCER_TYPES, DataValidationError
+from gene_explorer.domain import DataValidationError
 from gene_explorer.repository import GeneRepository
 
 logger = logging.getLogger(__name__)
@@ -20,11 +20,13 @@ def build_app(settings: Settings | None = None) -> FastAPI:
     logging.basicConfig(level=settings.log_level.upper())
 
     repo = GeneRepository.from_csv(settings.csv_path)
-    if set(repo.cancer_types) != set(CANCER_TYPES):
-        raise DataValidationError(
-            f"Dataset cancers {repo.cancer_types} do not match the code vocabulary {CANCER_TYPES}."
-        )
+    if not repo.cancer_types:
+        raise DataValidationError(f"Dataset at {settings.csv_path} contains no rows.")
 
-    agent = build_agent(settings)
-    logger.info("gene-explorer ready | model=%s", settings.model)
-    return create_app(settings=settings, agent=agent, repo=repo)
+    agent = build_agent(settings, repo)
+    logger.info(
+        "gene-explorer ready | model=%s | cancers=%d",
+        settings.model,
+        len(repo.cancer_types),
+    )
+    return create_app(settings=settings, agent=agent)

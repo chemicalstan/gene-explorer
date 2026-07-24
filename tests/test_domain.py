@@ -1,17 +1,16 @@
-from typing import get_args
-
-from gene_explorer.domain import CANCER_TYPES, CancerName, GeneContext
+from gene_explorer.domain import DataValidationError, GeneExplorerError, ToolCallLog
 
 
-def test_cancer_types_are_sorted_and_unique():
-    assert list(CANCER_TYPES) == sorted(CANCER_TYPES)
-    assert len(set(CANCER_TYPES)) == len(CANCER_TYPES)
+def test_tool_call_log_defaults_to_empty():
+    assert ToolCallLog().tool_calls == []
 
 
-def test_cancer_name_literal_matches_tuple():
-    assert set(get_args(CancerName)) == set(CANCER_TYPES)
+def test_tool_call_log_records_order():
+    log = ToolCallLog()
+    log.tool_calls.append("get_targets")
+    log.tool_calls.append("get_expressions")
+    assert log.tool_calls == ["get_targets", "get_expressions"]
 
 
-def test_context_defaults_to_empty_tool_calls():
-    ctx = GeneContext(repo=object())  # type: ignore[arg-type]
-    assert ctx.tool_calls == []
+def test_data_validation_error_is_a_domain_error():
+    assert issubclass(DataValidationError, GeneExplorerError)
