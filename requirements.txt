@@ -1,7 +1,0 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-openai-agents==0.18.3
-openai==2.48.0
-pydantic==2.13.4
-pydantic-settings==2.7.1
-pandas==2.2.3

@@ -50,9 +50,7 @@ async def test_run_agent_wraps_failures(settings, repo, monkeypatch):
         await run_agent(agent, "x", max_turns=6)
 
 
-@pytest.mark.skipif(
-    not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e"
-)
+@pytest.mark.skipif(not os.getenv("GROQ_LIVE_TEST"), reason="set GROQ_LIVE_TEST=1 for live e2e")
 async def test_live_breast_query_grounded(real_repo):
     # Reads the real GROQ_API_KEY from the environment, not the fake-key fixture.
     live_settings = Settings(_env_file=None)

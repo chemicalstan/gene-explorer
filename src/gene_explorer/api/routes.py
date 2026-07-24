@@ -24,14 +24,10 @@ def build_router(settings: Settings, agent: Agent[ToolCallLog]) -> APIRouter:
     @router.post("/chat", response_model=ChatResponse, tags=["Agent"])
     async def chat(request: ChatRequest) -> ChatResponse:
         try:
-            answer, tools = await run_agent(
-                agent, request.message, max_turns=settings.max_turns
-            )
+            answer, tools = await run_agent(agent, request.message, max_turns=settings.max_turns)
         except AgentRunError as exc:
             logger.exception("agent run failed")
-            raise HTTPException(
-                status_code=502, detail="The model is unavailable."
-            ) from exc
+            raise HTTPException(status_code=502, detail="The model is unavailable.") from exc
         return ChatResponse(answer=answer, model=settings.model, tool_calls_made=tools)
 
     @router.get("/health/live", response_model=LivenessResponse, tags=["System"])

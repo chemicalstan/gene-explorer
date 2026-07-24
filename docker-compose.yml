@@ -9,8 +9,7 @@ services:
     env_file:
       - path: .env
         required: false
-    volumes:
-      - .:/app 
+
   frontend:
     build:
       context: ./frontend
