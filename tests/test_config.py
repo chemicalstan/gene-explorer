@@ -41,3 +41,17 @@ def test_allowed_origins_parses_comma_separated_string(monkeypatch):
         "http://localhost:8501",
         "https://app.example",
     ]
+
+
+def test_api_keys_default_empty_and_parse(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    assert Settings(_env_file=None).api_keys == []
+    monkeypatch.setenv("API_KEYS", "key-a, key-b")
+    assert Settings(_env_file=None).api_keys == ["key-a", "key-b"]
+
+
+def test_rate_limit_defaults(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    s = Settings(_env_file=None)
+    assert s.rate_limit == "60/minute"
+    assert s.rate_limit_storage_uri == "memory://"

@@ -2,10 +2,21 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import BeforeValidator, Field, SecretStr
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _DATA = Path(__file__).parent / "data" / "gene_dataset.csv"
+
+
+def _split_csv(value: object) -> object:
+    """Accept a plain comma-separated string from .env instead of requiring JSON."""
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return value
+
+
+# A list field that also accepts a comma-separated string from the environment.
+CsvList = Annotated[list[str], NoDecode, BeforeValidator(_split_csv)]
 
 
 class Settings(BaseSettings):
@@ -25,18 +36,13 @@ class Settings(BaseSettings):
     request_timeout_s: float = 30.0
     csv_path: Path = _DATA
     log_level: str = "INFO"
-    # NoDecode + validator: accept a plain comma-separated string in .env
-    # (ALLOWED_ORIGINS=http://a,http://b) instead of requiring JSON.
-    allowed_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["http://localhost:8501"]
-    )
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def _split_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
-        return value
+    allowed_origins: CsvList = Field(default_factory=lambda: ["http://localhost:8501"])
+    # Comma-separated list of accepted API keys. Empty means authentication is
+    # disabled, which is intended only for local development.
+    api_keys: CsvList = Field(default_factory=list)
+    rate_limit: str = "60/minute"
+    rate_limit_storage_uri: str = "memory://"
 
 
 @lru_cache

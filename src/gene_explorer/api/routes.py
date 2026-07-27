@@ -1,9 +1,12 @@
-from __future__ import annotations
-
 import logging
 
+# NOTE: no `from __future__ import annotations` here. slowapi wraps the chat
+# endpoint, and FastAPI must resolve the real body-model annotation through that
+# wrapper. String annotations resolve against slowapi's module and fail, which
+# makes FastAPI treat the request body as a query parameter.
 from agents import Agent
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
 
 from gene_explorer.agent import AgentRunError, run_agent
 from gene_explorer.api.schemas import (
@@ -12,19 +15,26 @@ from gene_explorer.api.schemas import (
     LivenessResponse,
     ReadinessResponse,
 )
+from gene_explorer.auth import build_api_key_dependency
 from gene_explorer.config import Settings
 from gene_explorer.domain import ToolCallLog
 
 logger = logging.getLogger(__name__)
 
 
-def build_router(settings: Settings, agent: Agent[ToolCallLog]) -> APIRouter:
+def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter) -> APIRouter:
     router = APIRouter(prefix="/v1")
+    require_api_key = build_api_key_dependency(settings)
 
     @router.post("/chat", response_model=ChatResponse, tags=["Agent"])
-    async def chat(request: ChatRequest) -> ChatResponse:
+    @limiter.limit(settings.rate_limit)
+    async def chat(
+        request: Request,
+        body: ChatRequest,
+        _: None = Depends(require_api_key),
+    ) -> ChatResponse:
         try:
-            answer, tools = await run_agent(agent, request.message, max_turns=settings.max_turns)
+            answer, tools = await run_agent(agent, body.message, max_turns=settings.max_turns)
         except AgentRunError as exc:
             logger.exception("agent run failed")
             raise HTTPException(status_code=502, detail="The model is unavailable.") from exc
