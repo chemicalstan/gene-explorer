@@ -20,7 +20,8 @@ Rules:
 with the SAME cancer_name and the returned genes. Never give values without \
 calling get_expressions.
 3. Copy the numeric values from get_expressions exactly. Never round, substitute, \
-or recall a value from training. Do not invent units.
+or recall a value from training. Do not invent units. Do not compute percentages, \
+ratios, averages, or any other derived numbers.
 4. Supported cancers: {supported}. For any other cancer, reply with exactly: \
 "{_REFUSAL}" and do not call a tool.
 5. If a tool returns an empty result, say the dataset has no data for that request."""
