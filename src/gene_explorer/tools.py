@@ -29,7 +29,9 @@ def build_tools(repo: GeneRepository) -> list[Tool]:
     ) -> str:
         """Return the JSON list of gene targets for one cancer type."""
         ctx.context.tool_calls.append("get_targets")
-        return json.dumps(repo.targets_for(cancer_name))
+        genes = repo.targets_for(cancer_name)
+        ctx.context.record_targets(genes)
+        return json.dumps(genes)
 
     @function_tool(strict_mode=True)
     def get_expressions(
@@ -39,6 +41,8 @@ def build_tools(repo: GeneRepository) -> list[Tool]:
     ) -> str:
         """Return JSON median expression values for genes within one cancer type."""
         ctx.context.tool_calls.append("get_expressions")
-        return json.dumps(repo.expressions_for(cancer_name, genes))
+        expressions = repo.expressions_for(cancer_name, genes)
+        ctx.context.record_expressions(expressions)
+        return json.dumps(expressions)
 
     return [get_targets, get_expressions]
