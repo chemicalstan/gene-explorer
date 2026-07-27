@@ -14,6 +14,13 @@ from agents import (
 
 from gene_explorer.domain import ToolCallLog
 
+# Safe replies returned to the user when a guardrail trips.
+INPUT_BLOCKED_MESSAGE = "I can only answer questions about the cancer gene expression dataset."
+OUTPUT_UNGROUNDED_MESSAGE = (
+    "I could not verify every value in my answer against the dataset, so I have "
+    "withheld it. Please rephrase your question."
+)
+
 # A decimal literal, e.g. 0.032. Integers are ignored on purpose: expression
 # values are decimals, and counts such as "10 genes" are legitimate.
 _DECIMAL = re.compile(r"\d+\.\d+")

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from agents import (
     Agent,
+    InputGuardrailTripwireTriggered,
     ModelSettings,
     OpenAIChatCompletionsModel,
+    OutputGuardrailTripwireTriggered,
     set_tracing_disabled,
 )
 from agents.run import Runner
@@ -11,9 +15,17 @@ from openai import AsyncOpenAI
 
 from gene_explorer.config import Settings
 from gene_explorer.domain import GeneExplorerError, ToolCallLog
+from gene_explorer.guardrails import (
+    INPUT_BLOCKED_MESSAGE,
+    OUTPUT_UNGROUNDED_MESSAGE,
+    grounding_guardrail,
+    injection_guardrail,
+)
 from gene_explorer.prompts import build_system_prompt
 from gene_explorer.repository import GeneRepository
 from gene_explorer.tools import build_tools
+
+logger = logging.getLogger(__name__)
 
 # Tracing otherwise uploads to OpenAI's servers and 401s against a Groq-only key.
 set_tracing_disabled(True)
@@ -38,6 +50,8 @@ def build_agent(settings: Settings, repo: GeneRepository) -> Agent[ToolCallLog]:
         instructions=build_system_prompt(repo.cancer_types),
         model=model,
         tools=build_tools(repo),
+        input_guardrails=[injection_guardrail],
+        output_guardrails=[grounding_guardrail],
         model_settings=ModelSettings(
             temperature=settings.temperature,
             extra_body={
@@ -54,6 +68,12 @@ async def run_agent(
     log = ToolCallLog()
     try:
         result = await Runner.run(agent, message, context=log, max_turns=max_turns)
+    except InputGuardrailTripwireTriggered:
+        logger.warning("input guardrail blocked a request")
+        return INPUT_BLOCKED_MESSAGE, list(log.tool_calls)
+    except OutputGuardrailTripwireTriggered:
+        logger.warning("output grounding guardrail withheld an answer")
+        return OUTPUT_UNGROUNDED_MESSAGE, list(log.tool_calls)
     except Exception as exc:  # noqa: BLE001 - surfaced as a domain error to the API
         raise AgentRunError(str(exc)) from exc
 
