@@ -17,11 +17,17 @@ from gene_explorer.auth import build_api_key_dependency
 from gene_explorer.config import Settings
 from gene_explorer.domain import ToolCallLog
 from gene_explorer.logging_config import get_logger
+from gene_explorer.sessions import AgentSession, SessionStore
 
 logger = get_logger("gene_explorer.chat")
 
 
-def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter) -> APIRouter:
+def build_router(
+    settings: Settings,
+    agent: Agent[ToolCallLog],
+    limiter: Limiter,
+    session_store: SessionStore,
+) -> APIRouter:
     router = APIRouter(prefix="/v1")
     require_api_key = build_api_key_dependency(settings)
 
@@ -32,8 +38,15 @@ def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter
         body: ChatRequest,
         _: None = Depends(require_api_key),
     ) -> ChatResponse:
+        session = None
+        if body.session_id is not None:
+            # Scope the conversation to the caller, so a guessed session id from
+            # another caller cannot read this conversation.
+            session = AgentSession(session_store, body.session_id, request.headers.get("X-API-Key"))
         try:
-            result = await run_agent(agent, body.message, max_turns=settings.max_turns)
+            result = await run_agent(
+                agent, body.message, max_turns=settings.max_turns, session=session
+            )
         except AgentRunError as exc:
             # Do NOT log the traceback here: its frame locals hold body.message,
             # which may contain PII. Log only the error type.
@@ -47,6 +60,7 @@ def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter
             model=settings.model,
             tool_calls=result.tool_calls,
             message_length=len(body.message),
+            has_session=body.session_id is not None,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
             total_tokens=usage.total_tokens,
@@ -60,6 +74,7 @@ def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter
             answer=result.answer,
             model=settings.model,
             tool_calls_made=result.tool_calls,
+            session_id=body.session_id,
         )
 
     @router.get("/health/live", response_model=LivenessResponse, tags=["System"])

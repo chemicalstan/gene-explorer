@@ -24,6 +24,7 @@ from gene_explorer.guardrails import (
 from gene_explorer.logging_config import get_logger
 from gene_explorer.prompts import build_system_prompt
 from gene_explorer.repository import GeneRepository
+from gene_explorer.sessions import AgentSession
 from gene_explorer.tools import build_tools
 
 logger = get_logger("gene_explorer.agent")
@@ -82,10 +83,22 @@ def build_agent(settings: Settings, repo: GeneRepository) -> Agent[ToolCallLog]:
     )
 
 
-async def run_agent(agent: Agent[ToolCallLog], message: str, *, max_turns: int) -> AgentResult:
+async def run_agent(
+    agent: Agent[ToolCallLog],
+    message: str,
+    *,
+    max_turns: int,
+    session: AgentSession | None = None,
+) -> AgentResult:
     log = ToolCallLog()
+    if session is not None:
+        # Values verified in earlier turns stay verified. Without this seed the
+        # grounding guardrail would reject a correct answer that quotes a value
+        # from the conversation instead of calling a tool again.
+        log.grounded_values |= await session.grounded_values()
+
     try:
-        result = await Runner.run(agent, message, context=log, max_turns=max_turns)
+        result = await Runner.run(agent, message, context=log, max_turns=max_turns, session=session)
     except InputGuardrailTripwireTriggered as exc:
         logger.warning("input_guardrail_blocked")
         return AgentResult(INPUT_BLOCKED_MESSAGE, list(log.tool_calls), _usage_from_exception(exc))
@@ -96,6 +109,9 @@ async def run_agent(agent: Agent[ToolCallLog], message: str, *, max_turns: int) 
         )
     except Exception as exc:  # noqa: BLE001 - surfaced as a domain error to the API
         raise AgentRunError(str(exc)) from exc
+
+    if session is not None and log.grounded_values:
+        await session.record_grounded_values(log.grounded_values)
 
     # Each tool appends its own name to the log, giving the exact call order.
     return AgentResult(

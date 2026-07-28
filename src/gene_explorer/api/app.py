@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from agents import Agent
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -16,6 +17,7 @@ from gene_explorer.api.routes import build_router
 from gene_explorer.config import Settings
 from gene_explorer.domain import ToolCallLog
 from gene_explorer.logging_config import get_logger
+from gene_explorer.sessions import SessionStore, build_session_store
 
 _access_logger = get_logger("gene_explorer.access")
 
@@ -48,11 +50,24 @@ async def _access_log(
             )
 
 
-def create_app(*, settings: Settings, agent: Agent[ToolCallLog]) -> FastAPI:
+def create_app(
+    *,
+    settings: Settings,
+    agent: Agent[ToolCallLog],
+    session_store: SessionStore | None = None,
+) -> FastAPI:
+    store = session_store or build_session_store(settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        await store.close()
+
     app = FastAPI(
         title="Gene Explorer API",
         description="Conversational agent for querying a cancer gene expression dataset.",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     limiter = Limiter(
@@ -74,5 +89,5 @@ def create_app(*, settings: Settings, agent: Agent[ToolCallLog]) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
-    app.include_router(build_router(settings, agent, limiter))
+    app.include_router(build_router(settings, agent, limiter, store))
     return app
