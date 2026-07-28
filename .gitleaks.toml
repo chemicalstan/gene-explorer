@@ -1,0 +1,13 @@
+# gitleaks configuration.
+# Extends the default ruleset and allowlists the fake PII sentinels that the test
+# suite uses to verify log redaction. These are not real secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test PII sentinels used to verify redaction — not real secrets."
+regexes = [
+  '''patient-MRN-00998877''',
+  '''PATIENT-SSN-123-45-6789''',
+  '''SENTINEL-PII-4242''',
+]
