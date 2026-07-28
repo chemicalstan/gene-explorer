@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     request_timeout_s: float = 30.0
     csv_path: Path = _DATA
     log_level: str = "INFO"
+    log_json: bool = True
+    # Per-million-token prices for cost accounting. Defaults match gpt-oss-120b.
+    input_price_per_1m: float = 0.15
+    output_price_per_1m: float = 0.60
 
     allowed_origins: CsvList = Field(default_factory=lambda: ["http://localhost:8501"])
     # Comma-separated list of accepted API keys. Empty means authentication is

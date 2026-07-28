@@ -17,6 +17,8 @@ dependencies = [
     "pydantic-settings==2.7.1",
     "pandas==2.2.3",
     "slowapi==0.1.10",
+    "structlog==26.1.0",
+    "asgi-correlation-id==5.0.1",
 ]
 
 [dependency-groups]
