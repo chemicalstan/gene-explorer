@@ -17,9 +17,15 @@ def _add_request_id(logger: WrappedLogger, method_name: str, event_dict: EventDi
 
 
 def configure_logging(level: str = "INFO", *, json_logs: bool = True) -> None:
-    """Configure structlog for the process. JSON in production, console in dev."""
+    """Configure structlog for the process. JSON in production, console in dev.
+
+    The console renderer uses a traceback formatter that does NOT dump frame
+    locals. Frame locals can contain the user's message, which may hold PII.
+    """
     renderer: structlog.types.Processor = (
-        structlog.processors.JSONRenderer() if json_logs else structlog.dev.ConsoleRenderer()
+        structlog.processors.JSONRenderer()
+        if json_logs
+        else structlog.dev.ConsoleRenderer(exception_formatter=structlog.dev.plain_traceback)
     )
     structlog.configure(
         processors=[

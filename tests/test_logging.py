@@ -27,3 +27,18 @@ def test_json_logging_emits_valid_json(capsys):
     assert record["event"] == "hello"
     assert record["answer"] == 0.032
     assert record["level"] == "info"
+
+
+def test_console_logging_traceback_omits_frame_locals(capsys):
+    # Regression: the console traceback must NOT dump frame locals, which can
+    # contain the user's message (PII).
+    configure_logging("INFO", json_logs=False)
+    secret = "SENTINEL-PII-4242"
+    try:
+        message = secret  # a frame local a naive traceback would render
+        raise ValueError("boom-" + message[:0])
+    except ValueError:
+        get_logger("test").exception("failed")
+    out = capsys.readouterr().out
+    assert "failed" in out
+    assert secret not in out

@@ -29,17 +29,23 @@ async def _access_log(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
     start = time.perf_counter()
-    response = await call_next(request)
-    # Health probes are frequent and low-value; do not log them.
-    if not request.url.path.startswith("/v1/health"):
-        _access_logger.info(
-            "request",
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            duration_ms=round((time.perf_counter() - start) * 1000, 2),
-        )
-    return response
+    status_code = 500  # assume failure until proven otherwise
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        # Log even when the endpoint raised (status stays 500), so genuine
+        # server failures remain visible and traceable by request id.
+        # Health probes are frequent and low-value; do not log them.
+        if not request.url.path.startswith("/v1/health"):
+            _access_logger.info(
+                "request",
+                method=request.method,
+                path=request.url.path,
+                status_code=status_code,
+                duration_ms=round((time.perf_counter() - start) * 1000, 2),
+            )
 
 
 def create_app(*, settings: Settings, agent: Agent[ToolCallLog]) -> FastAPI:

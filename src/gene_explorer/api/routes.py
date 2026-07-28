@@ -35,7 +35,9 @@ def build_router(settings: Settings, agent: Agent[ToolCallLog], limiter: Limiter
         try:
             result = await run_agent(agent, body.message, max_turns=settings.max_turns)
         except AgentRunError as exc:
-            logger.exception("agent_run_failed")
+            # Do NOT log the traceback here: its frame locals hold body.message,
+            # which may contain PII. Log only the error type.
+            logger.error("agent_run_failed", error_type=type(exc.__cause__ or exc).__name__)
             raise HTTPException(status_code=502, detail="The model is unavailable.") from exc
 
         usage = result.usage

@@ -90,6 +90,29 @@ async def test_output_tripwire_returns_safe_message(settings, repo, monkeypatch)
     agent = build_agent(settings, repo)
     result = await run_agent(agent, "breast values?", max_turns=6)
     assert result.answer == OUTPUT_UNGROUNDED_MESSAGE
+    # No run_data on the exception -> usage is zero (defensive default).
+    assert result.usage.total_tokens == 0
+
+
+async def test_output_tripwire_recovers_spent_usage(settings, repo, monkeypatch):
+    from unittest.mock import MagicMock
+
+    # The model ran and spent tokens before the output guardrail tripped; the SDK
+    # attaches that usage to the exception's run_data. It must not be lost.
+    exc = OutputGuardrailTripwireTriggered(MagicMock())
+    run_data = MagicMock()
+    run_data.context_wrapper.usage = _Usage()
+    exc.run_data = run_data
+
+    async def _trip(agent, message, *, context, max_turns):
+        raise exc
+
+    monkeypatch.setattr(Runner, "run", staticmethod(_trip))
+    agent = build_agent(settings, repo)
+    result = await run_agent(agent, "breast values?", max_turns=6)
+    assert result.answer == OUTPUT_UNGROUNDED_MESSAGE
+    assert result.usage.total_tokens == 120  # recovered, not undercounted to zero
+    assert result.usage.requests == 2
 
 
 async def test_input_tripwire_returns_safe_message(settings, repo, monkeypatch):
