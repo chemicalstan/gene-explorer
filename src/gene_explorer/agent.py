@@ -14,7 +14,7 @@ from agents.run import Runner
 from openai import AsyncOpenAI
 
 from gene_explorer.config import Settings
-from gene_explorer.domain import GeneExplorerError, ToolCallLog
+from gene_explorer.domain import AgentResult, GeneExplorerError, RunUsage, ToolCallLog
 from gene_explorer.guardrails import (
     INPUT_BLOCKED_MESSAGE,
     OUTPUT_UNGROUNDED_MESSAGE,
@@ -62,20 +62,28 @@ def build_agent(settings: Settings, repo: GeneRepository) -> Agent[ToolCallLog]:
     )
 
 
-async def run_agent(
-    agent: Agent[ToolCallLog], message: str, *, max_turns: int
-) -> tuple[str, list[str]]:
+async def run_agent(agent: Agent[ToolCallLog], message: str, *, max_turns: int) -> AgentResult:
     log = ToolCallLog()
     try:
         result = await Runner.run(agent, message, context=log, max_turns=max_turns)
     except InputGuardrailTripwireTriggered:
         logger.warning("input guardrail blocked a request")
-        return INPUT_BLOCKED_MESSAGE, list(log.tool_calls)
+        return AgentResult(INPUT_BLOCKED_MESSAGE, list(log.tool_calls), RunUsage())
     except OutputGuardrailTripwireTriggered:
         logger.warning("output grounding guardrail withheld an answer")
-        return OUTPUT_UNGROUNDED_MESSAGE, list(log.tool_calls)
+        return AgentResult(OUTPUT_UNGROUNDED_MESSAGE, list(log.tool_calls), RunUsage())
     except Exception as exc:  # noqa: BLE001 - surfaced as a domain error to the API
         raise AgentRunError(str(exc)) from exc
 
+    usage = result.context_wrapper.usage
     # Each tool appends its own name to the log, giving the exact call order.
-    return str(result.final_output), list(log.tool_calls)
+    return AgentResult(
+        answer=str(result.final_output),
+        tool_calls=list(log.tool_calls),
+        usage=RunUsage(
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+            requests=usage.requests,
+        ),
+    )

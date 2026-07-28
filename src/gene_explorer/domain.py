@@ -31,3 +31,27 @@ class ToolCallLog:
     def record_expressions(self, expressions: dict[str, float]) -> None:
         self.grounded_genes.update(expressions.keys())
         self.grounded_values.update(expressions.values())
+
+
+@dataclass
+class RunUsage:
+    """Token usage for one agent run."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    requests: int = 0
+
+    def cost_usd(self, input_price_per_1m: float, output_price_per_1m: float) -> float:
+        return (self.input_tokens / 1_000_000) * input_price_per_1m + (
+            self.output_tokens / 1_000_000
+        ) * output_price_per_1m
+
+
+@dataclass
+class AgentResult:
+    """The outcome of one agent run: the answer, the tools used, and token usage."""
+
+    answer: str
+    tool_calls: list[str]
+    usage: RunUsage
