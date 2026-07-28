@@ -34,6 +34,8 @@ dev = [
 
 [tool.uv]
 package = true
+# Security floor for a transitive dependency: mcp < 1.28.1 has CVE-2026-59950.
+constraint-dependencies = ["mcp>=1.28.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
