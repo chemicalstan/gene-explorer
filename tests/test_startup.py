@@ -11,6 +11,22 @@ def test_build_app_succeeds_with_real_data(monkeypatch):
     assert app.title == "Gene Explorer API"
 
 
+def test_startup_logs_ready_event(monkeypatch, capsys):
+    import json
+
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    build_app(Settings(_env_file=None))
+    records = [
+        json.loads(line)
+        for line in capsys.readouterr().out.splitlines()
+        if line.strip().startswith("{")
+    ]
+    ready = [r for r in records if r.get("event") == "startup_ready"]
+    assert ready
+    assert ready[-1]["model"] == "openai/gpt-oss-120b"
+    assert ready[-1]["cancer_types"] == 10
+
+
 def test_startup_rejects_empty_dataset(monkeypatch, tmp_path):
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
     csv = tmp_path / "empty.csv"
