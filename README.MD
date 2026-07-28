@@ -1,7 +1,8 @@
 # Gene Explorer 🧬
 
-![CI](https://img.shields.io/badge/CI-passing-brightgreen)
-![Docker](https://img.shields.io/badge/Docker-required-blue)
+[![CI](https://github.com/chemicalstan/gene-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/chemicalstan/gene-explorer/actions/workflows/ci.yml)
+[![Security](https://github.com/chemicalstan/gene-explorer/actions/workflows/security.yml/badge.svg)](https://github.com/chemicalstan/gene-explorer/actions/workflows/security.yml)
+[![CodeQL](https://github.com/chemicalstan/gene-explorer/actions/workflows/codeql.yml/badge.svg)](https://github.com/chemicalstan/gene-explorer/actions/workflows/codeql.yml)
 
 Gene Explorer is an agentic AI prototype that lets non-technical researchers ask natural language questions about cancer gene expression data. It orchestrates data-lookup functions (combining multiple tool calls when needed) and works out of the box with zero configuration.
 
