@@ -67,11 +67,64 @@ def test_scope_key_hashes_the_caller():
     assert scope_key("s1", "a") != scope_key("s1", "b")
 
 
-async def test_grounded_values_accumulate(store):
+def test_scope_key_requires_a_caller():
+    # There is no anonymous fallback: without a caller every session would share
+    # one namespace, which is exactly the leak this guards against.
+    for missing in ("", None):
+        with pytest.raises(ValueError):
+            scope_key("s1", missing)
+
+
+async def test_grounded_values_replace_rather_than_accumulate(store):
     session = AgentSession(store, "s1", "caller-a")
     await session.record_grounded_values({0.032})
     await session.record_grounded_values({0.094})
-    assert await session.grounded_values() == {0.032, 0.094}
+    # Only the previous turn's values remain, so the allowed set cannot grow to
+    # cover the whole dataset and neutralise the guardrail.
+    assert await session.grounded_values() == {0.094}
+
+
+def test_trim_history_drops_orphaned_tool_output():
+    from gene_explorer.sessions import trim_history
+
+    items = [
+        {"type": "function_call", "call_id": "c1"},
+        {"type": "function_call_output", "call_id": "c1"},
+        {"role": "assistant", "content": "answer"},
+    ]
+    # A positional cut of 2 would keep the output without its call, which the
+    # model rejects and which would wedge the conversation.
+    kept = trim_history(items, 2)
+    assert all(i.get("type") != "function_call_output" for i in kept)
+
+
+def test_trim_history_keeps_intact_pairs():
+    from gene_explorer.sessions import trim_history
+
+    items = [
+        {"role": "user", "content": "q"},
+        {"type": "function_call", "call_id": "c1"},
+        {"type": "function_call_output", "call_id": "c1"},
+    ]
+    assert len(trim_history(items, 3)) == 3
+
+
+async def test_expired_sessions_are_swept_not_just_evicted_on_access():
+    swept = InMemorySessionStore(ttl_seconds=0, max_items=10)
+    abandoned = AgentSession(swept, "abandoned", "caller-a")
+    await abandoned.add_items([_msg("old")])
+    # Touching a DIFFERENT session must clear the abandoned one, otherwise the
+    # process retains every session it has ever seen.
+    other = AgentSession(swept, "other", "caller-b")
+    await other.add_items([_msg("new")])
+    assert swept._items.get(scope_key("abandoned", "caller-a")) is None
+
+
+async def test_session_count_is_capped():
+    capped = InMemorySessionStore(ttl_seconds=3600, max_items=10, max_sessions=3)
+    for n in range(6):
+        await AgentSession(capped, f"s{n}", "caller-a").add_items([_msg(str(n))])
+    assert len(capped._items) <= 3
 
 
 async def test_expired_session_is_dropped():

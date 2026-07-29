@@ -40,9 +40,17 @@ def build_router(
     ) -> ChatResponse:
         session = None
         if body.session_id is not None:
+            caller_id = request.headers.get("X-API-Key")
+            if not caller_id:
+                # Without a caller identity every session would share one
+                # namespace, so any client could read this conversation.
+                raise HTTPException(
+                    status_code=400,
+                    detail="Conversation sessions require an X-API-Key header.",
+                )
             # Scope the conversation to the caller, so a guessed session id from
             # another caller cannot read this conversation.
-            session = AgentSession(session_store, body.session_id, request.headers.get("X-API-Key"))
+            session = AgentSession(session_store, body.session_id, caller_id)
         try:
             result = await run_agent(
                 agent, body.message, max_turns=settings.max_turns, session=session

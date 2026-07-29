@@ -22,9 +22,21 @@ from gene_explorer.sessions import SessionStore, build_session_store
 _access_logger = get_logger("gene_explorer.access")
 
 
-def _rate_limit_key(request: Request) -> str:
-    # Rate limit per API key when present, otherwise per client address.
-    return request.headers.get("X-API-Key") or get_remote_address(request)
+def _build_rate_limit_key(settings: Settings) -> Callable[[Request], str]:
+    """Bucket by API key, but only by a key the service accepts.
+
+    Bucketing on an arbitrary header would let a caller rotate the header on each
+    request and get a fresh budget every time, which bypasses the limit.
+    """
+    allowed = set(settings.api_keys)
+
+    def key_func(request: Request) -> str:
+        candidate = request.headers.get("X-API-Key")
+        if candidate and candidate in allowed:
+            return candidate
+        return get_remote_address(request)
+
+    return key_func
 
 
 async def _access_log(
@@ -71,7 +83,7 @@ def create_app(
     )
 
     limiter = Limiter(
-        key_func=_rate_limit_key,
+        key_func=_build_rate_limit_key(settings),
         storage_uri=settings.rate_limit_storage_uri,
     )
     app.state.limiter = limiter

@@ -82,8 +82,17 @@ async def grounding_guardrail(
     agent: Agent[ToolCallLog],
     output: str,
 ) -> GuardrailFunctionOutput:
-    """Fail closed: every decimal in the answer must be a value the tools returned
-    this turn. Any other decimal is treated as ungrounded and trips the wire."""
+    """Fail closed: every decimal in the answer must be a verified value.
+
+    Verified means returned by a tool in this turn or, in a conversation, in the
+    immediately preceding turn (see AgentSession.record_grounded_values). Any
+    other decimal is treated as ungrounded and trips the wire.
+
+    Known limitation: the check is on the numbers alone, so within one
+    conversation a value verified for one cancer type would not be rejected if
+    the model later attributed it to another. Integers are not checked at all,
+    because counts such as "10 genes" are legitimate.
+    """
     answer = output if isinstance(output, str) else str(output)
     ungrounded = ungrounded_numbers(answer, ctx.context.grounded_values)
     return GuardrailFunctionOutput(

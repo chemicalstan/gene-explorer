@@ -181,10 +181,48 @@ def test_502_path_logs_no_message_content(monkeypatch, capsys):
     assert secret not in logs  # message content must never reach the logs
 
 
-def test_session_id_is_echoed(client):
-    r = client.post("/v1/chat", json={"message": "hi", "session_id": "abc-1"})
+def test_session_id_is_echoed(monkeypatch):
+    client = _client(monkeypatch, api_keys=["key-a"])
+    r = client.post(
+        "/v1/chat",
+        json={"message": "hi", "session_id": "abc-1"},
+        headers={"X-API-Key": "key-a"},
+    )
     assert r.status_code == 200
     assert r.json()["session_id"] == "abc-1"
+
+
+def test_session_requires_a_caller_identity(client):
+    """Without an API key every session would share one namespace, so any client
+    could read another's conversation. The request is refused instead."""
+    r = client.post("/v1/chat", json={"message": "hi", "session_id": "abc-1"})
+    assert r.status_code == 400
+    # Stateless requests still work with no key.
+    assert client.post("/v1/chat", json={"message": "hi"}).status_code == 200
+
+
+def test_rate_limit_cannot_be_bypassed_by_rotating_the_key_header(monkeypatch):
+    """An unaccepted key must not create a fresh bucket, or the limit is free to
+    bypass by changing the header on each request."""
+    client = _client(monkeypatch, rate_limit="2/minute")
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "a"}, headers={"X-API-Key": "made-up-1"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "b"}, headers={"X-API-Key": "made-up-2"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "c"}, headers={"X-API-Key": "made-up-3"}
+        ).status_code
+        == 429
+    )
 
 
 def test_session_id_absent_by_default(client):

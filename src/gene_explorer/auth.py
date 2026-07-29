@@ -16,8 +16,10 @@ _API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def _is_valid(candidate: str, allowed: list[str]) -> bool:
     # Constant-time comparison against every key, so a wrong key cannot be found
-    # faster than a right one.
-    return any(hmac.compare_digest(candidate, key) for key in allowed)
+    # faster than a right one. Compare bytes: Starlette decodes headers as
+    # latin-1, and compare_digest rejects str with characters above U+007F.
+    candidate_bytes = candidate.encode("utf-8", errors="ignore")
+    return any(hmac.compare_digest(candidate_bytes, key.encode("utf-8")) for key in allowed)
 
 
 def build_api_key_dependency(
