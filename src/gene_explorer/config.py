@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BeforeValidator, Field, SecretStr
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     api_keys: CsvList = Field(default_factory=list)
     rate_limit: str = "60/minute"
     rate_limit_storage_uri: str = "memory://"
+
+    # Conversation memory. "memory" keeps history in the process, which suits one
+    # instance. "redis" shares history across instances.
+    session_backend: Literal["memory", "redis"] = "memory"
+    redis_url: str = "redis://localhost:6379/0"
+    session_ttl_seconds: int = 3600
+    # Upper bound on stored history items, so the token cost per turn is bounded.
+    session_max_items: int = 40
 
 
 @lru_cache

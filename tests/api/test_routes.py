@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -12,7 +13,7 @@ class _StubAgent:
     pass
 
 
-async def _fake_run_agent(agent, message, *, max_turns):
+async def _fake_run_agent(agent, message, *, max_turns, session=None):
     return AgentResult(
         answer="BRCA2: 0.032",
         tool_calls=["get_targets", "get_expressions"],
@@ -168,7 +169,7 @@ def test_502_path_logs_no_message_content(monkeypatch, capsys):
     settings = Settings(_env_file=None, log_json=False)
     secret = "patient-MRN-00998877"
 
-    async def _raises(agent, message, *, max_turns):
+    async def _raises(agent, message, *, max_turns, session=None):
         # `message` (the secret) is a live frame local here.
         raise AgentRunError("upstream failure") from TimeoutError("groq timeout")
 
@@ -180,6 +181,96 @@ def test_502_path_logs_no_message_content(monkeypatch, capsys):
     assert secret not in logs  # message content must never reach the logs
 
 
+def test_session_id_is_echoed(monkeypatch):
+    client = _client(monkeypatch, api_keys=["key-a"])
+    r = client.post(
+        "/v1/chat",
+        json={"message": "hi", "session_id": "abc-1"},
+        headers={"X-API-Key": "key-a"},
+    )
+    assert r.status_code == 200
+    assert r.json()["session_id"] == "abc-1"
+
+
+def test_session_requires_a_caller_identity(client):
+    """Without an API key every session would share one namespace, so any client
+    could read another's conversation. The request is refused instead."""
+    r = client.post("/v1/chat", json={"message": "hi", "session_id": "abc-1"})
+    assert r.status_code == 400
+    # Stateless requests still work with no key.
+    assert client.post("/v1/chat", json={"message": "hi"}).status_code == 200
+
+
+def test_rate_limit_cannot_be_bypassed_by_rotating_the_key_header(monkeypatch):
+    """An unaccepted key must not create a fresh bucket, or the limit is free to
+    bypass by changing the header on each request."""
+    client = _client(monkeypatch, rate_limit="2/minute")
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "a"}, headers={"X-API-Key": "made-up-1"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "b"}, headers={"X-API-Key": "made-up-2"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/v1/chat", json={"message": "c"}, headers={"X-API-Key": "made-up-3"}
+        ).status_code
+        == 429
+    )
+
+
+def test_session_id_absent_by_default(client):
+    assert client.post("/v1/chat", json={"message": "hi"}).json()["session_id"] is None
+
+
+def test_malformed_session_id_is_rejected(client):
+    # The pattern blocks path/# separators and whitespace.
+    for bad in ["../etc", "a b", "x" * 200, ""]:
+        r = client.post("/v1/chat", json={"message": "hi", "session_id": bad})
+        assert r.status_code == 422, bad
+
+
+def test_session_is_scoped_to_the_caller(monkeypatch):
+    """Two callers using the same session id must not share a conversation."""
+    from gene_explorer.sessions import InMemorySessionStore
+
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    settings = Settings(_env_file=None, api_keys=["key-a", "key-b"])
+    store = InMemorySessionStore(ttl_seconds=3600, max_items=10)
+    captured: list[object] = []
+
+    async def _capture(agent, message, *, max_turns, session=None):
+        captured.append(session)
+        await session.add_items([{"role": "user", "content": message}])
+        return AgentResult("ok", [], RunUsage())
+
+    monkeypatch.setattr("gene_explorer.api.routes.run_agent", _capture)
+    client = TestClient(create_app(settings=settings, agent=_StubAgent(), session_store=store))
+    client.post(
+        "/v1/chat",
+        json={"message": "caller a secret", "session_id": "same"},
+        headers={"X-API-Key": "key-a"},
+    )
+    client.post(
+        "/v1/chat",
+        json={"message": "caller b", "session_id": "same"},
+        headers={"X-API-Key": "key-b"},
+    )
+
+    session_a, session_b = captured
+    history_a = [i["content"] for i in asyncio.run(session_a.get_items())]
+    history_b = [i["content"] for i in asyncio.run(session_b.get_items())]
+    assert history_a == ["caller a secret"]
+    # Caller B must not see caller A's message despite the identical session id.
+    assert history_b == ["caller b"]
+
+
 def test_unhandled_error_is_access_logged(monkeypatch, capsys):
     from gene_explorer.logging_config import configure_logging
 
@@ -187,7 +278,7 @@ def test_unhandled_error_is_access_logged(monkeypatch, capsys):
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
     settings = Settings(_env_file=None)
 
-    async def _boom(agent, message, *, max_turns):
+    async def _boom(agent, message, *, max_turns, session=None):
         raise ValueError("unexpected")  # not AgentRunError -> unhandled -> 500
 
     monkeypatch.setattr("gene_explorer.api.routes.run_agent", _boom)

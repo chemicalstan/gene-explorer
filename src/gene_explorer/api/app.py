@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from agents import Agent
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -16,13 +17,26 @@ from gene_explorer.api.routes import build_router
 from gene_explorer.config import Settings
 from gene_explorer.domain import ToolCallLog
 from gene_explorer.logging_config import get_logger
+from gene_explorer.sessions import SessionStore, build_session_store
 
 _access_logger = get_logger("gene_explorer.access")
 
 
-def _rate_limit_key(request: Request) -> str:
-    # Rate limit per API key when present, otherwise per client address.
-    return request.headers.get("X-API-Key") or get_remote_address(request)
+def _build_rate_limit_key(settings: Settings) -> Callable[[Request], str]:
+    """Bucket by API key, but only by a key the service accepts.
+
+    Bucketing on an arbitrary header would let a caller rotate the header on each
+    request and get a fresh budget every time, which bypasses the limit.
+    """
+    allowed = set(settings.api_keys)
+
+    def key_func(request: Request) -> str:
+        candidate = request.headers.get("X-API-Key")
+        if candidate and candidate in allowed:
+            return candidate
+        return get_remote_address(request)
+
+    return key_func
 
 
 async def _access_log(
@@ -48,15 +62,28 @@ async def _access_log(
             )
 
 
-def create_app(*, settings: Settings, agent: Agent[ToolCallLog]) -> FastAPI:
+def create_app(
+    *,
+    settings: Settings,
+    agent: Agent[ToolCallLog],
+    session_store: SessionStore | None = None,
+) -> FastAPI:
+    store = session_store or build_session_store(settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        await store.close()
+
     app = FastAPI(
         title="Gene Explorer API",
         description="Conversational agent for querying a cancer gene expression dataset.",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     limiter = Limiter(
-        key_func=_rate_limit_key,
+        key_func=_build_rate_limit_key(settings),
         storage_uri=settings.rate_limit_storage_uri,
     )
     app.state.limiter = limiter
@@ -74,5 +101,5 @@ def create_app(*, settings: Settings, agent: Agent[ToolCallLog]) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
-    app.include_router(build_router(settings, agent, limiter))
+    app.include_router(build_router(settings, agent, limiter, store))
     return app

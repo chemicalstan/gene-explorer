@@ -19,6 +19,7 @@ dependencies = [
     "slowapi==0.1.10",
     "structlog==26.1.0",
     "asgi-correlation-id==5.0.1",
+    "redis==8.0.1",
 ]
 
 [dependency-groups]
@@ -32,6 +33,7 @@ dev = [
     "bandit==1.9.4",
     "pip-audit==2.10.1",
     "pytest-cov==7.1.0",
+    "fakeredis==2.37.0",
 ]
 
 [tool.uv]
