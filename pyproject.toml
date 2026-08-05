@@ -39,7 +39,11 @@ dev = [
 [tool.uv]
 package = true
 # Security floor for a transitive dependency: mcp < 1.28.1 has CVE-2026-59950.
-constraint-dependencies = ["mcp>=1.28.1"]
+constraint-dependencies = [
+    "mcp>=1.28.1",
+    # cryptography < 50.0.0 has CVE-2026-69247.
+    "cryptography>=50.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
