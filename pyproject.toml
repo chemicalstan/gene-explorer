@@ -75,6 +75,9 @@ plugins = ["pydantic.mypy"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+# The frontend API client is plain httpx, so its tests run here without needing
+# Streamlit installed.
+pythonpath = ["frontend"]
 
 [tool.coverage.run]
 source = ["gene_explorer"]

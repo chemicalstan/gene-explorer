@@ -7,4 +7,12 @@ toolbarMode = "minimal"
 
 [server]
 headless = true
-enableCORS = false
+
+# Presentation lives here rather than in CSS overrides of Streamlit internals,
+# which break whenever Streamlit changes its markup.
+[theme]
+base = "light"
+primaryColor = "#b8603c"
+backgroundColor = "#f6efe9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#1f1c1a"
