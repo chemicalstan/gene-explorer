@@ -33,7 +33,13 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8501:8501"
+    env_file:
+      - path: .env
+        required: false
     environment:
       - BACKEND_URL=http://backend:8000
+      # Needed for follow-up questions: the API scopes a conversation to its
+      # caller, so the UI must present a key that API_KEYS accepts.
+      - GENE_EXPLORER_API_KEY=${GENE_EXPLORER_API_KEY:-}
     depends_on:
       - backend

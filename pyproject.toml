@@ -39,7 +39,11 @@ dev = [
 [tool.uv]
 package = true
 # Security floor for a transitive dependency: mcp < 1.28.1 has CVE-2026-59950.
-constraint-dependencies = ["mcp>=1.28.1"]
+constraint-dependencies = [
+    "mcp>=1.28.1",
+    # cryptography < 50.0.0 has CVE-2026-69247.
+    "cryptography>=50.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -75,6 +79,9 @@ plugins = ["pydantic.mypy"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+# The frontend API client is plain httpx, so its tests run here without needing
+# Streamlit installed.
+pythonpath = ["frontend"]
 
 [tool.coverage.run]
 source = ["gene_explorer"]
