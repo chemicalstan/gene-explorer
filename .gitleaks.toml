@@ -5,9 +5,14 @@
 useDefault = true
 
 [allowlist]
-description = "Test PII sentinels used to verify redaction — not real secrets."
+description = """
+Test PII sentinels used to verify log redaction, and the placeholder key in the
+documentation. None of these are real secrets.
+"""
 regexes = [
   '''patient-MRN-00998877''',
   '''PATIENT-SSN-123-45-6789''',
   '''SENTINEL-PII-4242''',
+  '''your_key_here''',
+  '''your_groq_api_key_here''',
 ]
